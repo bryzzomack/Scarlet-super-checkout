@@ -26,8 +26,15 @@ This is a pretend checkout for play. Gift cards and payments are local pretend b
 No real payment or gift-card system is connected.
 
 ## GitHub Pages update
-Replace the files in your existing repository with the new index.html, manifest.webmanifest, sw.js, and icons. Commit to main. The service-worker cache is versioned v4 to force a fresh app shell.
+Replace the files in your existing repository with the new index.html, manifest.webmanifest, sw.js, and icons. Commit to main. The service-worker cache is versioned v5 to force a fresh app shell.
 
 ## Moving the pretend store
 Parent Station -> Export Store on the old device.
 On the new device, Parent Station -> Import Store and select the JSON file.
+
+
+## New in v5
+- Scanner appears near the top when activated.
+- One camera session can scan multiple products without reopening the scanner.
+- Voice uses the best available natural English system voice and a slower, friendlier delivery.
+- Price Check announces itself and generates a random pretend price.

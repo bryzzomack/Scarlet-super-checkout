@@ -20,6 +20,7 @@ label{font-weight:800}.small{font-size:13px;color:#657086}.center{text-align:cen
 .total{font-size:35px;font-weight:1000;text-align:center;background:#fff7b8;border-radius:20px;padding:12px;margin:10px 0}
 .cartrow{display:flex;justify-content:space-between;align-items:center;padding:11px 5px;border-bottom:2px dashed #ddd;gap:8px}.cartrow:last-child{border-bottom:0}
 .cartname{font-weight:900}.price{font-weight:900}.qty{font-size:13px;color:#657086}
+#scannerCard{scroll-margin-top:8px}
 #scanner{position:relative;overflow:hidden;border-radius:22px;background:#111;min-height:270px}
 video{display:block;width:100%;height:310px;object-fit:cover}
 .scanline{position:absolute;left:8%;right:8%;top:50%;height:4px;background:#ffef57;box-shadow:0 0 14px #ffef57;animation:scan 1.5s infinite alternate}
@@ -51,6 +52,18 @@ hr{border:0;border-top:2px dashed #ddd;margin:15px 0}
     <button class="pink" onclick="produce()">🥕 Produce PLU</button>
   </div>
 </div>
+
+<div id="scannerCard" class="card hidden">
+<h2>📷 Barcode Scanner</h2>
+<div id="scanner"><video id="video" playsinline muted></video><div class="scanline"></div></div>
+<div id="scanStatus">Point the iPad camera at a barcode. After each beep, keep going!</div>
+<div class="buttons">
+<button class="pink" onclick="stopScan()">✋ Stop</button>
+<button class="yellow" onclick="manual()">🔢 Enter Code</button>
+</div>
+<p class="small">iPad tip: use Safari, allow camera access, and hold the barcode 6–12 inches from the camera. If automatic detection isn't available on a particular iPad/browser, the Enter Code button is always available.</p>
+</div>
+
 
 <div class="card">
 <h2>🧺 Your Cart</h2>
@@ -86,16 +99,6 @@ hr{border:0;border-top:2px dashed #ddd;margin:15px 0}
 <button class="purple" onclick="parentMode()">🔐 Parent Mode</button>
 </div>
 
-<div id="scannerCard" class="card hidden">
-<h2>📷 Barcode Scanner</h2>
-<div id="scanner"><video id="video" playsinline muted></video><div class="scanline"></div></div>
-<div id="scanStatus">Point the iPad camera at a barcode.</div>
-<div class="buttons">
-<button class="pink" onclick="stopScan()">✋ Stop</button>
-<button class="yellow" onclick="manual()">🔢 Enter Code</button>
-</div>
-<p class="small">iPad tip: use Safari, allow camera access, and hold the barcode 6–12 inches from the camera. If automatic detection isn't available on a particular iPad/browser, the Enter Code button is always available.</p>
-</div>
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalbox" id="modalBox"></div></div>
@@ -110,14 +113,29 @@ const defaultProducts=[
 ];
 let products=JSON.parse(localStorage.getItem(KEY)||'null');
 if(!products){products=Object.fromEntries(defaultProducts.map(x=>[x[0],{code:x[0],name:x[1],price:x[2],emoji:x[3]}]));saveProducts();}
-let cart=[], stream=null, detector=null, scanMode='cart', scanning=false;
+let cart=[], stream=null, detector=null, scanMode='cart', scanning=false, lastScanned='', lastScanTime=0;
 
 function saveProducts(){localStorage.setItem(KEY,JSON.stringify(products));}
 function money(n){return '$'+Number(n).toFixed(2)}
 function total(){return cart.reduce((s,x)=>s+x.price*x.qty,0)}
 function render(){document.getElementById('total').textContent=money(total());let c=document.getElementById('cart');c.innerHTML=cart.length?cart.map((x,i)=>`<div class="cartrow"><div><span style="font-size:26px">${x.emoji||'🛒'}</span> <span class="cartname">${x.name}</span><div class="qty">Qty ${x.qty}</div></div><div><span class="price">${money(x.price*x.qty)}</span> <button style="padding:7px 10px;font-size:14px" onclick="removeItem(${i})">➖</button></div></div>`).join(''):'<div class="center">Your cart is empty. Let’s go shopping! 🛒✨</div>'}
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.remove('hidden');clearTimeout(window.tt);window.tt=setTimeout(()=>e.classList.add('hidden'),2200)}
-function speak(t){try{speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.rate=.93;u.pitch=1.16;speechSynthesis.speak(u)}catch(e){}}
+function speak(t){
+ try{
+   speechSynthesis.cancel();
+   const voices=speechSynthesis.getVoices();
+   const preferred=voices.find(v=>/Samantha|Karen|Moira|Ava|Jenny|Aria|Google US English|Microsoft.*Natural/i.test(v.name)&&/^en(-|_)/i.test(v.lang))
+     || voices.find(v=>/^en-US/i.test(v.lang))
+     || voices.find(v=>/^en/i.test(v.lang));
+   let u=new SpeechSynthesisUtterance(t);
+   if(preferred) u.voice=preferred;
+   u.lang=preferred?.lang||'en-US';
+   u.rate=.88;
+   u.pitch=1.04;
+   u.volume=1;
+   speechSynthesis.speak(u);
+ }catch(e){}
+}
 function beep(kind='success'){try{let C=window.AudioContext||window.webkitAudioContext;if(!C)return;let a=new C(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);let f=kind==='success'?[880,1175,1480]:kind==='error'?[180,130]:[660,880];f.forEach((hz,i)=>{o.frequency.setValueAtTime(hz,a.currentTime+i*.09)});g.gain.setValueAtTime(.001,a.currentTime);g.gain.exponentialRampToValueAtTime(.16,a.currentTime+.02);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.3);o.start();o.stop(a.currentTime+.32)}catch(e){}}
 function celebrate(){let holder=document.getElementById('celebrate');holder.innerHTML='';let chars=['🎉','⭐','🛒','🍎','🍭','💖','🥳','✨','🧁','🌈'];for(let i=0;i<45;i++){let s=document.createElement('span');s.className='confetti';s.textContent=chars[Math.floor(Math.random()*chars.length)];s.style.left=Math.random()*100+'%';s.style.animationDelay=Math.random()*.7+'s';holder.appendChild(s)}setTimeout(()=>holder.innerHTML='',3000)}
 function add(code){code=String(code).trim();let p=products[code];if(!p){unknown(code);return false}let existing=cart.find(x=>x.code===code);if(existing)existing.qty++;else cart.push({...p,qty:1});render();beep();speak(`${p.name}. ${money(p.price)}. Added to your cart. Your total is ${money(total())}.`);toast(`⭐ ${p.name} added!`);bag(p.emoji||'🛍️');return true}
@@ -131,13 +149,28 @@ function openModal(html){document.getElementById('modalBox').innerHTML=html;docu
 function closeModal(){document.getElementById('modal').classList.add('hidden')}
 function manual(){stopScan();openModal(`<h2>🔢 Enter Barcode</h2><input id="codeInput" inputmode="numeric" placeholder="Barcode or PLU"><div class="buttons"><button class="green" onclick="doManual()">Scan!</button><button class="yellow" onclick="closeModal()">Cancel</button></div>`);setTimeout(()=>document.getElementById('codeInput').focus(),100)}
 function doManual(){let c=document.getElementById('codeInput').value;closeModal();if(c)add(c)}
-function priceCheck(){openModal(`<h2>🏷️ Price Check</h2><input id="pc" inputmode="numeric" placeholder="Scan/type barcode or PLU"><div class="buttons"><button class="blue" onclick="doPrice()">Check Price</button><button class="yellow" onclick="closeModal()">Close</button></div>`);setTimeout(()=>document.getElementById('pc').focus(),100)}
-function doPrice(){let c=document.getElementById('pc').value.trim(),p=products[c];if(p){beep();speak(`${p.name}. ${money(p.price)}.`);document.getElementById('pc').value='';toast(`${p.emoji||'🏷️'} ${p.name}: ${money(p.price)}`)}else{beep('error');speak('Sorry, I do not know that item yet.');toast('Item not found')}} 
+function priceCheck(){
+  beep();
+  speak('Price check! Let me find a price for you.');
+  const randomPrice=(Math.floor((Math.random()*950)+50)/100).toFixed(2);
+  setTimeout(()=>{
+    beep();
+    speak(`Price check complete. The price is ${money(randomPrice)}.`);
+    toast(`🏷️ Price Check: ${money(randomPrice)}`);
+    openModal(`<h2>🏷️ Price Check</h2><div class="total">${money(randomPrice)}</div><p class="center">Ding! That is today's pretend price. ✨</p><button class="green" onclick="closeModal();speak('Ready for the next item!')">Done!</button>`);
+  },650);
+}
+function doPrice(){ priceCheck(); }. ${money(p.price)}.`);document.getElementById('pc').value='';toast(`${p.emoji||'🏷️'} ${p.name}: ${money(p.price)}`)}else{beep('error');speak('Sorry, I do not know that item yet.');toast('Item not found')}} 
 function produce(){openModal(`<h2>🥕 Produce PLU</h2><p class="small">Try: Apple 4131 • Banana 4011 • Tomato 4064 • Avocado 4225</p><input id="plu" inputmode="numeric" placeholder="4-digit PLU"><div class="buttons"><button class="pink" onclick="doPLU()">Add Produce</button><button class="yellow" onclick="closeModal()">Close</button></div>`);setTimeout(()=>document.getElementById('plu').focus(),100)}
 function doPLU(){let c=document.getElementById('plu').value.trim();closeModal();if(c)add(c)}
 
 async function startScan(mode='cart'){
- scanMode=mode;document.getElementById('scannerCard').classList.remove('hidden');document.getElementById('scanStatus').textContent='Starting camera…';
+ scanMode=mode;
+ lastScanned=''; lastScanTime=0;
+ const scannerCard=document.getElementById('scannerCard');
+ scannerCard.classList.remove('hidden');
+ scannerCard.scrollIntoView({behavior:'smooth',block:'start'});
+ document.getElementById('scanStatus').textContent='Starting camera…';
  try{
    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
    let v=document.getElementById('video');v.srcObject=stream;await v.play();
@@ -161,13 +194,31 @@ async function scanLoop(){
  if(!scanning||!detector)return;
  try{
    let v=document.getElementById('video');let found=await detector.detect(v);
-   if(found&&found.length){let raw=found[0].rawValue;scanning=false;stopTracksOnly();handleScan(raw);return}
+   if(found&&found.length){
+   let raw=String(found[0].rawValue||'').trim();
+   let now=Date.now();
+   if(raw && (raw!==lastScanned || now-lastScanTime>1800)){
+      lastScanned=raw; lastScanTime=now;
+      handleScan(raw);
+      document.getElementById('scanStatus').textContent='✅ Got it! Point at the next barcode…';
+   }
+ }
  }catch(e){}
  requestAnimationFrame(scanLoop);
 }
 function stopTracksOnly(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
 function stopScan(){scanning=false;stopTracksOnly();document.getElementById('scannerCard').classList.add('hidden');}
-function handleScan(code){beep();if(scanMode==='gift')openGiftPayment(code);else add(code)}
+function handleScan(code){
+  beep();
+  if(scanMode==='gift'){
+    scanning=false;
+    stopTracksOnly();
+    openGiftPayment(code);
+  }else{
+    add(code);
+    scanning=true;
+  }
+}
 function unknown(code){
  beep('error');
  openModal(`<h2>✨ NEW ITEM!</h2><p>I found a barcode I don't know yet.</p><div class="badge">📦 ${htmlEscape(code)}</div><label>What is it?</label><input id="newName" placeholder="Example: Rainbow Cereal"><label>Price</label><input id="newPrice" inputmode="decimal" placeholder="2.99"><label>Emoji</label><input id="newEmoji" maxlength="2" placeholder="🛒"><div class="buttons"><button class="green" onclick="saveNew('${htmlEscape(code)}')">Add to Store!</button><button class="yellow" onclick="closeModal()">Cancel</button></div>`);
@@ -195,6 +246,7 @@ function changePin(){let p=document.getElementById('newPin').value.trim();if(p){
 function parentAdd(){let c=document.getElementById('pcode').value.trim(),n=document.getElementById('pname').value.trim(),p=parseFloat(document.getElementById('pprice').value),e=document.getElementById('pemoji').value.trim()||'🛒';if(!c||!n||!isFinite(p)){toast('Enter code, name and price');return}products[c]={code:c,name:n,price:p,emoji:e};saveProducts();toast('Product saved!');speak(`${n} was saved to the store.`)}
 function exportStore(){let blob=new Blob([JSON.stringify(products,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scarlet-super-checkout-store.json';a.click();toast('Store file created!')}
 function importStore(){let i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=()=>{let f=i.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x||typeof x!=='object')throw 0;products=x;saveProducts();render();toast('Store imported!');speak('Your store was imported!')}catch(e){toast('That store file could not be used.')}};r.readAsText(f)};i.click()}
+if ('speechSynthesis' in window) { speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices(); }
 render();
 </script>
 </body>
