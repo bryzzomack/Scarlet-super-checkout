@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#132f4c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Scarlet's Super Checkout</title>
+<style>
+:root{--navy:#132f4c;--blue:#2778c5;--green:#2f9e62;--yellow:#ffd65a;--red:#d9534f;--bg:#edf2f5;--card:#fff;--ink:#17212b;--muted:#687580;--line:#dbe3e9}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink)}
+button,input,select{font:inherit}button{border:0}
+.app{max-width:760px;margin:auto;min-height:100vh;background:#fff}
+.top{background:var(--navy);color:#fff;padding:15px 15px 12px;position:sticky;top:0;z-index:20}
+.brand{display:flex;justify-content:space-between;align-items:center}.brand h1{font-size:21px;margin:0}.brand small{opacity:.8}
+.total{font-size:38px;font-weight:900;text-align:right;margin-top:2px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:93px;z-index:19}
+.tab{padding:11px 3px;border-radius:11px;background:#edf1f4;color:var(--navy);font-weight:800;font-size:12px}.tab.active{background:var(--blue);color:#fff}
+main{padding:12px 13px 94px}.panel{display:none}.panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:8px}.grow{flex:1}
+input,select{width:100%;padding:12px;border:1px solid #cbd5dc;border-radius:10px;background:#fff}
+.btn{background:var(--blue);color:#fff;border-radius:11px;padding:11px 13px;font-weight:800}.btn.green{background:var(--green)}.btn.red{background:var(--red)}.btn.gray{background:#e9eef2;color:var(--navy)}.btn.yellow{background:var(--yellow);color:#4a3a00}
+.big{width:100%;padding:16px;font-size:17px;border-radius:14px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.quick{padding:12px 7px;border-radius:13px;background:#eaf5ff;color:var(--navy);font-weight:800}.quick small{display:block;font-weight:500;margin-top:2px}
+.items{display:flex;flex-direction:column}.item{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}
+.item small{display:block;color:var(--muted);font-size:11px}.price{font-weight:900;white-space:nowrap}.qty{display:flex;align-items:center;gap:5px}.qty button{width:34px;height:34px;border-radius:9px;background:#edf1f4;font-weight:900}
+.empty{text-align:center;color:var(--muted);padding:22px}.hint{font-size:13px;color:var(--muted)}
+.scanbox{background:#06121d;border-radius:15px;overflow:hidden;position:relative}.scanbox video{width:100%;height:285px;object-fit:cover;display:block}.line{position:absolute;left:8%;right:8%;top:50%;height:3px;background:#63ee91;box-shadow:0 0 12px #63ee91}
+.status{padding:11px;border-radius:10px;background:#f3f6f8;margin-top:8px;font-size:14px}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}.key{padding:16px;border-radius:11px;background:#eef2f5;font-size:20px;font-weight:900}.key.ok{background:var(--green);color:#fff}.key.clear{background:#fee8e7;color:#8b2521}
+.checkout{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(760px,100%);background:#fff;border-top:1px solid var(--line);padding:9px 12px;display:flex;gap:7px;z-index:30}.checkout button{flex:1}
+.receipt{font:13px ui-monospace,monospace;white-space:pre-wrap;background:#fafafa;border:1px dashed #bbb;padding:14px;border-radius:10px}
+.hero{background:linear-gradient(135deg,#173c5e,#2778c5);color:#fff;border-radius:18px;padding:18px;margin-bottom:12px}.hero h2{margin:0 0 5px;font-size:26px}
+.mode{display:flex;gap:7px}.mode button{flex:1;padding:12px;border-radius:10px;background:#edf2f5;font-weight:800}.mode button.active{background:var(--navy);color:#fff}
+.productRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;padding:3px 7px;border-radius:20px;background:#e7f6ed;color:#217248;font-size:11px;font-weight:800}
+.modal{position:fixed;inset:0;background:#0008;z-index:100;display:none;align-items:flex-end}.modal.show{display:flex}.sheet{background:#fff;width:100%;max-width:760px;margin:auto;border-radius:20px 20px 0 0;padding:18px;max-height:90vh;overflow:auto}
+.toast{position:fixed;left:50%;top:105px;transform:translateX(-50%);background:#132f4c;color:#fff;padding:11px 16px;border-radius:30px;z-index:200;display:none;font-weight:800}.toast.show{display:block}
+@media(max-width:430px){.grid{grid-template-columns:repeat(2,1fr)}.total{font-size:33px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="brand"><div><h1>🛒 Scarlet's Super Checkout</h1><small>Scan • Shop • Pay • Play</small></div><b>⭐</b></div><div class="total" id="total">$0.00</div></header>
+<nav class="tabs">
+<button class="tab active" data-tab="shop">🛒 Shop</button><button class="tab" data-tab="scanner">📷 Scan</button><button class="tab" data-tab="price">🔎 Price</button><button class="tab" data-tab="parent">🔐 Parent</button>
+</nav>
+<main>
+<section id="shop" class="panel active">
+<div class="hero"><h2>Ready to shop?</h2><div>Scan an item or choose one from the shelf.</div><button class="btn yellow big" style="margin-top:12px" onclick="showTab('scanner')">📷 Start Scanning</button></div>
+<div class="card"><div class="row"><input id="search" placeholder="Search products..." oninput="renderShelf()"><button class="btn" onclick="speak('What would you like to buy?')">🔊</button></div></div>
+<div class="card"><h3 style="margin-top:0">🏪 Store shelves</h3><div class="grid" id="shelf"></div></div>
+<div class="card"><h3 style="margin-top:0">🛍️ Your cart</h3><div id="cart"></div></div>
+</section>
+
+<section id="scanner" class="panel">
+<div class="card"><h3 style="margin-top:0">📷 Scan a barcode</h3><p class="hint">Normal scan adds products. During Gift Card payment, the same scanner reads the gift-card barcode for payment.</p>
+<div class="scanbox"><video id="video" playsinline muted></video><div class="line"></div></div>
+<div class="row" style="margin-top:8px"><button class="btn grow" onclick="startScanner()">▶ Camera</button><button class="btn gray" onclick="stopScanner()">■ Stop</button></div>
+<div id="scanStatus" class="status">Camera is off.</div>
+</div>
+<div class="card"><h3 style="margin-top:0">🔢 Enter a code</h3><input id="manualCode" placeholder="Barcode or PLU" inputmode="numeric"><div class="keypad">
+<button class="key" onclick="key('1')">1</button><button class="key" onclick="key('2')">2</button><button class="key" onclick="key('3')">3</button>
+<button class="key" onclick="key('4')">4</button><button class="key" onclick="key('5')">5</button><button class="key" onclick="key('6')">6</button>
+<button class="key" onclick="key('7')">7</button><button class="key" onclick="key('8')">8</button><button class="key" onclick="key('9')">9</button>
+<button class="key clear" onclick="manualCode.value=''">C</button><button class="key" onclick="key('0')">0</button><button class="key ok" onclick="processCode(manualCode.value)">OK</button>
+</div></div>
+<div class="card"><h3 style="margin-top:0">📸 Picture mode</h3><p class="hint">Take a picture of a grocery item and the app will try to recognize it.</p><input type="file" accept="image/*" capture="environment" onchange="recognizePhoto(event)"><div id="photoResult"></div></div>
+</section>
+
+<section id="price" class="panel">
+<div class="card"><h3 style="margin-top:0">🔎 Price Checker</h3><input id="priceSearch" placeholder="Barcode, PLU, or product name" onkeydown="if(event.key==='Enter')doLookup()"><button class="btn big" style="margin-top:8px" onclick="doLookup()">Check Price</button><div id="lookup"></div></div>
+<div class="card"><h3 style="margin-top:0">🥕 Produce PLUs</h3><div class="grid" id="plu"></div></div>
+</section>
+
+<section id="parent" class="panel">
+<div class="card" id="parentLock"><h3 style="margin-top:0">🔐 Parent Mode</h3><p class="hint">Store controls are protected. Default PIN: <b>1234</b></p><input id="pin" type="password" inputmode="numeric" placeholder="Parent PIN"><button class="btn big" style="margin-top:8px" onclick="unlock()">Unlock</button></div>
+<div id="parentArea" style="display:none">
+<div class="card"><h3 style="margin-top:0">➕ Add product</h3><input id="pname" placeholder="Product name"><div class="row" style="margin-top:7px"><input id="pprice" type="number" step=".01" placeholder="Price"><input id="pcode" placeholder="Barcode / PLU"></div><input id="ptags" style="margin-top:7px" placeholder="Search words, e.g. fruit snack"><button class="btn green big" style="margin-top:8px" onclick="addProduct()">Add to Store</button></div>
+<div class="card"><div class="row"><h3 class="grow" style="margin:0">Store inventory</h3><button class="btn red" onclick="resetStore()">Reset</button></div><div id="inventory"></div></div>
+<div class="card"><h3 style="margin-top:0">⚙️ Parent settings</h3><button class="btn gray" onclick="changePin()">Change PIN</button> <button class="btn gray" onclick="clearSaved()">Clear saved cart</button></div>
+</div></section>
+</main>
+<div class="checkout"><button class="btn gray" onclick="clearCart()">🗑</button><button class="btn yellow" onclick="showTab('price');doCartCheck()">🔎 Check</button><button class="btn green" onclick="pay()">💵 Checkout</button></div>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="payModal" class="modal"><div class="sheet"><h2>💵 Checkout</h2><div id="payInfo"></div><div class="mode">
+<button id="cashBtn" class="active" onclick="setPayMode('cash')">💵 Cash</button>
+<button onclick="setPayMode('card')">💳 Pretend Card</button>
+<button onclick="setPayMode('gift')">🎁 Gift Card</button>
+</div>
+<div id="cashArea"><input id="cash" type="number" step=".01" inputmode="decimal" placeholder="Cash received" style="margin-top:10px"><button class="btn green big" style="margin-top:8px" onclick="finishCash()">Take Payment</button></div><div id="cardArea" style="display:none"><button class="btn green big" style="margin-top:10px" onclick="finishCard()">Tap / Insert Card</button></div>
+<div id="giftArea" style="display:none">
+  <div class="status">🎁 Scan the gift card barcode with the camera, or enter its number below.</div>
+  <input id="giftCode" placeholder="Gift card number" inputmode="numeric" style="margin-top:8px">
+  <input id="giftBalance" type="number" step=".01" placeholder="Pretend gift card balance" style="margin-top:8px">
+  <button class="btn yellow big" style="margin-top:8px" onclick="useGiftCard()">Use Gift Card</button>
+  <button class="btn gray big" style="margin-top:8px" onclick="scanGiftCard()">📷 Scan Gift Card</button>
+</div>
+<button class="btn gray big" style="margin-top:8px" onclick="closePay()">Cancel</button></div></div>
+<div id="receiptModal" class="modal"><div class="sheet"><h2>🧾 Receipt</h2><div id="receipt"></div><button class="btn green big" onclick="closeReceipt()">Done</button></div></div>
+
+<script>
+const DEFAULT=[
+["Apple",.79,"4131","apple fruit"],["Banana",.59,"4011","banana fruit"],["Tomato",.89,"4064","tomato vegetable"],["Lettuce",1.99,"4061","lettuce salad vegetable"],["Potato",.69,"4072","potato vegetable"],["Onion",.79,"4663","onion vegetable"],["Carrot",.75,"4562","carrot vegetable"],["Avocado",1.29,"4225","avocado fruit"],["Lemon",.69,"4053","lemon fruit"],["Orange",.89,"4012","orange fruit"],["Milk",2.99,"041000000001","milk dairy"],["Chocolate Milk",2.49,"041000000002","milk chocolate dairy"],["Bread",2.49,"041000000003","bread bakery"],["Cereal",3.99,"041000000004","cereal breakfast"],["Orange Juice",3.49,"041000000005","juice drink"],["Cookies",2.99,"041000000006","cookie snack"],["Chips",2.49,"041000000007","chips snack"],["Eggs",3.29,"041000000008","eggs breakfast"],["Cheese",3.99,"041000000009","cheese dairy"],["Ice Cream",4.49,"041000000010","ice cream dessert"],["Water",1,"041000000011","water drink"],["Candy",1.49,"041000000012","candy sweet"],["Pizza",6.99,"041000000013","pizza frozen"],["Chicken Nuggets",5.49,"041000000014","chicken frozen"],["Coffee",5.99,"041000000015","coffee drink"]
+].map(x=>({name:x[0],price:x[1],code:x[2],tags:x[3],plu:x[2].length<=4}));
+let products=JSON.parse(localStorage.getItem("scarletProductsV2")||"null")||DEFAULT;
+let cart=[], stream=null, scanning=false, detector=null, payMode="cash";
+const $=id=>document.getElementById(id), money=n=>"$"+Number(n).toFixed(2);
+function save(){localStorage.setItem("scarletProductsV2",JSON.stringify(products))}
+function total(){return cart.reduce((s,x)=>s+x.price*x.qty,0)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function icon(p){let s=(p.name+" "+p.tags).toLowerCase();for(const [a,b] of [["banana","🍌"],["apple","🍎"],["orange","🍊"],["lemon","🍋"],["tomato","🍅"],["lettuce","🥬"],["carrot","🥕"],["potato","🥔"],["onion","🧅"],["avocado","🥑"],["egg","🥚"],["milk","🥛"],["bread","🍞"],["cheese","🧀"],["pizza","🍕"],["ice cream","🍦"],["cookie","🍪"],["candy","🍬"],["chips","🍿"],["coffee","☕"],["water","💧"]])if(s.includes(a))return b;return"🛍️"}
+function showTab(id){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===id));document.querySelectorAll(".panel").forEach(x=>x.classList.toggle("active",x.id===id));if(id!=="scanner")stopScanner()}
+document.querySelectorAll(".tab").forEach(x=>x.onclick=()=>showTab(x.dataset.tab));
+function toast(s){$("toast").textContent=s;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),1800)}
+function speak(s){if("speechSynthesis"in window){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.rate=.95;speechSynthesis.speak(u)}}
+function beep(type="scan"){
+try{
+ let c=new (window.AudioContext||window.webkitAudioContext)(), o=c.createOscillator(), g=c.createGain();
+ o.type="sine"; o.frequency.value=type==="success"?1047:type==="error"?220:880;
+ g.gain.value=.09; o.connect(g); g.connect(c.destination); o.start();
+ o.frequency.exponentialRampToValueAtTime(type==="error"?140:1320,c.currentTime+.11);
+ o.stop(c.currentTime+.12);
+}catch(e){}
+}
+function update(){ $("total").textContent=money(total());renderCart();renderShelf()}
+function renderShelf(){let q=($("search")?.value||"").toLowerCase();let a=products.filter(p=>(p.name+" "+p.tags+" "+p.code).toLowerCase().includes(q)).slice(0,24);$("shelf").innerHTML=a.map(p=>`<button class="quick" onclick="add('${esc(p.code)}')">${icon(p)} ${esc(p.name)}<small>${money(p.price)}</small></button>`).join("")}
+function renderCart(){if(!cart.length){$("cart").innerHTML='<div class="empty">🛒 Nothing in the cart yet.<br>Scan something to get started!</div>';return}$("cart").innerHTML='<div class="items">'+cart.map((p,i)=>`<div class="item"><div><b>${icon(p)} ${esc(p.name)}</b><small>${p.code}</small></div><div class="qty"><button onclick="qty(${i},-1)">−</button><b>${p.qty}</b><button onclick="qty(${i},1)">+</button></div><b class="price">${money(p.qty*p.price)}</b></div>`).join("")+`</div><hr><div class="row"><b class="grow">TOTAL</b><b style="font-size:22px">${money(total())}</b></div>`}
+function add(code){let p=products.find(x=>x.code===code)||products.find(x=>x.name.toLowerCase()===String(code).toLowerCase());if(!p){showTab("price");$("priceSearch").value=code;doLookup();return}let x=cart.find(x=>x.code===p.code);if(x)x.qty++;else cart.push({...p,qty:1});beep("success");toast("Added "+p.name);speak(p.name);update()}
+function qty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);update()}
+function clearCart(){cart=[];update();toast("Cart cleared")}
+function key(k){$("manualCode").value+=k}
+function processCode(code){
+code=String(code).trim();if(!code)return;
+if(window.giftCardScan){
+  window.giftCardScan=false;
+  openGiftPayment(code);
+  return;
+}
+let p=products.find(x=>x.code===code);
+if(p){add(code);showTab("shop")}
+else{$("priceSearch").value=code;showTab("price");doLookup()}
+}
+function openGiftPayment(code){
+  $("payModal").classList.add("show");
+  setPayMode("gift");
+  $("giftCode").value=code;
+  let saved=localStorage.getItem("giftCard_"+code);
+  if(saved!==null)$("giftBalance").value=saved;
+  $("payInfo").innerHTML=`<h3>Gift Card ${esc(code)}</h3><div>Cart total: <b>${money(total())}</b></div>`;
+}
+function doLookup(){let q=$("priceSearch").value.trim().toLowerCase();if(!q)return;let a=products.filter(p=>p.code===q||p.name.toLowerCase().includes(q)||p.tags.toLowerCase().includes(q));$("lookup").innerHTML=a.length?a.slice(0,10).map(p=>`<div class="status row"><div class="grow"><b>${icon(p)} ${esc(p.name)}</b><br><span class="badge">${p.code}</span></div><b>${money(p.price)}</b><button class="btn" onclick="add('${esc(p.code)}')">Add</button></div>`).join(""):'<div class="status">No item found. A parent can add it in Parent Mode.</div>'}
+function doCartCheck(){ $("priceSearch").value=""; $("lookup").innerHTML=cart.length?`<div class="status"><b>Cart total: ${money(total())}</b><br>${cart.map(x=>`${esc(x.name)} × ${x.qty}: ${money(x.price*x.qty)}`).join("<br>")}</div>`:'<div class="status">Cart is empty.</div>'}
+function renderPLU(){$("plu").innerHTML=products.filter(p=>p.plu).map(p=>`<button class="quick" onclick="$('priceSearch').value='${p.code}';doLookup()">${icon(p)} ${esc(p.name)}<small>PLU ${p.code} • ${money(p.price)}</small></button>`).join("")}
+async function startScanner(){stopScanner();try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});$("video").srcObject=stream;await $("video").play();scanning=true;if("BarcodeDetector"in window){detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","code_39","qr_code"]});$("scanStatus").textContent="🟢 Scanning… hold the barcode in the green line.";scanLoop()}else $("scanStatus").textContent="🟡 Camera works, but this browser doesn't support automatic barcode detection. Use manual code entry."}catch(e){$("scanStatus").textContent="🔴 Camera permission failed. Open this app over HTTPS and allow camera access."}}
+async function scanLoop(){if(!scanning)return;try{let a=await detector.detect($("video"));if(a.length&&a[0].rawValue){let c=a[0].rawValue;beep("success");$("scanStatus").innerHTML="✅ Scanned <b>"+esc(c)+"</b>";stopScanner();processCode(c);return}}catch(e){}requestAnimationFrame(scanLoop)}
+function stopScanner(){scanning=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}if($("video"))$("video").srcObject=null}
+async function recognizePhoto(ev){let f=ev.target.files[0];if(!f)return;$("photoResult").innerHTML='<div class="status">🔄 Looking at the picture…</div>';try{await loadVision();let img=document.createElement("img");img.src=URL.createObjectURL(f);await new Promise((r,j)=>{img.onload=r;img.onerror=j});let model=await mobilenet.load(),pred=await model.classify(img,5),hits=[];for(let x of pred){let p=match(x.className);if(p&&!hits.some(y=>y.name===p.name))hits.push(p)}$("photoResult").innerHTML=hits.length?'<div class="status"><b>📸 Possible matches:</b>'+hits.slice(0,3).map(p=>`<div class="row" style="margin-top:8px"><span class="grow">${icon(p)} ${p.name} — <b>${money(p.price)}</b></span><button class="btn" onclick="add('${p.code}')">Add</button></div>`).join("")+'</div>':'<div class="status">I could not confidently match that picture. Try a closer photo or use a barcode/PLU.</div>'}catch(e){$("photoResult").innerHTML='<div class="status">Picture recognition needs internet the first time it loads.</div>'}}
+async function loadVision(){if(window.mobilenet)return;await new Promise((r,j)=>{let s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js";s.onload=r;s.onerror=j;document.head.appendChild(s)});await new Promise((r,j)=>{let s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js";s.onload=r;s.onerror=j;document.head.appendChild(s)})}
+function match(s){s=s.toLowerCase();let rules=[["banana","Banana"],["apple","Apple"],["tomato","Tomato"],["lettuce","Lettuce"],["potato","Potato"],["onion","Onion"],["carrot","Carrot"],["avocado","Avocado"],["lemon","Lemon"],["orange","Orange"],["milk","Milk"],["bread","Bread"],["pizza","Pizza"],["ice cream","Ice Cream"],["cookie","Cookies"],["coffee","Coffee"],["cheese","Cheese"]];for(let r of rules)if(s.includes(r[0]))return products.find(p=>p.name===r[1])}
+function pay(){if(!cart.length){toast("Cart is empty");return}$("payInfo").innerHTML=`<h3>Total: ${money(total())}</h3>${cart.map(x=>`${x.name} × ${x.qty} — ${money(x.price*x.qty)}`).join("<br>")}`;$("payModal").classList.add("show");$("cash").value=""}
+function closePay(){$("payModal").classList.remove("show")}
+function setPayMode(m){
+payMode=m;
+$("cashArea").style.display=m==="cash"?"block":"none";
+$("cardArea").style.display=m==="card"?"block":"none";
+$("giftArea").style.display=m==="gift"?"block":"none";
+document.querySelectorAll(".mode button").forEach((b,i)=>b.classList.toggle("active",(m==="cash"&&i===0)||(m==="card"&&i===1)||(m==="gift"&&i===2)));
+}
+function finishCash(){let c=Number($("cash").value),t=total();if(c<t){toast("Need more cash");return}finishPayment(c-t,c)}
+function scanGiftCard(){
+  closePay();
+  showTab("scanner");
+  $("scanStatus").innerHTML="🎁 Gift-card scan mode: point the camera at the gift-card barcode.";
+  window.giftCardScan=true;
+  startScanner();
+}
+function useGiftCard(){
+  let code=$("giftCode").value.trim(), balance=Number($("giftBalance").value), t=total();
+  if(!code){toast("Enter or scan the gift card number");return}
+  if(!isFinite(balance)||balance<0){toast("Enter the pretend gift card balance");return}
+  localStorage.setItem("giftCard_"+code,String(Math.max(0,balance-t)));
+  if(balance<t){
+    toast("Gift card balance is too low");
+    speak("This gift card does not have enough balance.");
+    return;
+  }
+  closePay();
+  finishPayment(0,null,"GIFT CARD "+code);
+}
+function finishCard(){finishPayment(0,null)}
+function finishPayment(change,cash){closePay();let lines=["     SCARLET'S SUPER CHECKOUT","--------------------------------",...cart.map(x=>`${x.name.padEnd(20).slice(0,20)} ${money(x.qty*x.price).padStart(7)}`),"--------------------------------",`TOTAL                 ${money(total()).padStart(7)}`];if(cash!==null)lines.push(`CASH                  ${money(cash).padStart(7)}`,`CHANGE                ${money(change).padStart(7)}`);else lines.push("PAYMENT                 CARD");lines.push("","THANK YOU FOR SHOPPING! ⭐");$("receipt").innerHTML='<div class="receipt">'+esc(lines.join("\\n"))+'</div>';$("receiptModal").classList.add("show");speak("Thank you for shopping at Scarlet's Super Checkout!");cart=[];update()}
+function closeReceipt(){$("receiptModal").classList.remove("show")}
+function unlock(){if($("pin").value===(localStorage.getItem("scarletPin")||"1234")){$("parentLock").style.display="none";$("parentArea").style.display="block";renderInventory()}else toast("Wrong PIN")}
+function addProduct(){let n=$("pname").value.trim(),pr=Number($("pprice").value),c=$("pcode").value.trim(),t=$("ptags").value.trim()||n.toLowerCase();if(!n||!isFinite(pr)){toast("Enter name and price");return}products.push({name:n,price:pr,code:c||("CUSTOM"+Date.now()),tags:t,plu:c.length<=4});save();renderAll();renderInventory();["pname","pprice","pcode","ptags"].forEach(x=>$(x).value="");toast("Product added")}
+function renderInventory(){$("inventory").innerHTML=products.map((p,i)=>`<div class="productRow"><div><b>${icon(p)} ${esc(p.name)}</b><br><small>${esc(p.code)} • ${money(p.price)}</small></div><div><button class="btn gray" onclick="edit(${i})">Edit</button> <button class="btn red" onclick="del(${i})">×</button></div></div>`).join("")}
+function edit(i){let p=products[i],n=prompt("Name:",p.name);if(n===null)return;let pr=prompt("Price:",p.price);if(pr===null)return;let c=prompt("Barcode/PLU:",p.code);if(c===null)return;products[i]={...p,name:n||p.name,price:Number(pr)||p.price,code:c};save();renderAll();renderInventory()}
+function del(i){if(confirm("Remove "+products[i].name+"?")){products.splice(i,1);save();renderAll();renderInventory()}}
+function resetStore(){if(confirm("Reset all products to the original store?")){products=JSON.parse(JSON.stringify(DEFAULT));save();renderAll();renderInventory()}}
+function changePin(){let p=prompt("New parent PIN:");if(p){localStorage.setItem("scarletPin",p);toast("PIN changed")}}
+function clearSaved(){localStorage.removeItem("scarletCartV2");toast("Saved cart cleared")}
+function renderAll(){renderShelf();renderCart();renderPLU();$("total").textContent=money(total())}
+renderAll();
+if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"));
+</script>
+</body></html>
