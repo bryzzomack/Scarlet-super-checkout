@@ -160,7 +160,8 @@ function priceCheck(){
     openModal(`<h2>🏷️ Price Check</h2><div class="total">${money(randomPrice)}</div><p class="center">Ding! That is today's pretend price. ✨</p><button class="green" onclick="closeModal();speak('Ready for the next item!')">Done!</button>`);
   },650);
 }
-function doPrice(){ priceCheck(); }. ${money(p.price)}.`);document.getElementById('pc').value='';toast(`${p.emoji||'🏷️'} ${p.name}: ${money(p.price)}`)}else{beep('error');speak('Sorry, I do not know that item yet.');toast('Item not found')}} 
+function doPrice(){ priceCheck(); }
+
 function produce(){openModal(`<h2>🥕 Produce PLU</h2><p class="small">Try: Apple 4131 • Banana 4011 • Tomato 4064 • Avocado 4225</p><input id="plu" inputmode="numeric" placeholder="4-digit PLU"><div class="buttons"><button class="pink" onclick="doPLU()">Add Produce</button><button class="yellow" onclick="closeModal()">Close</button></div>`);setTimeout(()=>document.getElementById('plu').focus(),100)}
 function doPLU(){let c=document.getElementById('plu').value.trim();closeModal();if(c)add(c)}
 
