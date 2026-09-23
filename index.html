@@ -58,7 +58,7 @@ input,select{width:100%;padding:12px;border:1px solid #cbd5dc;border-radius:10px
 </section>
 
 <section id="scanner" class="panel">
-<div class="card"><h3 style="margin-top:0">📷 Scan a barcode</h3><p class="hint">Normal scan adds products. During Gift Card payment, the same scanner reads the gift-card barcode for payment.</p>
+<div class="card"><h3 style="margin-top:0">📷 Scan a barcode</h3><p class="hint">Normal scan adds products. If a barcode is new, the app can automatically add it after asking for the product name and price. During Gift Card payment, the same scanner reads the gift-card barcode for payment.</p>
 <div class="scanbox"><video id="video" playsinline muted></video><div class="line"></div></div>
 <div class="row" style="margin-top:8px"><button class="btn grow" onclick="startScanner()">▶ Camera</button><button class="btn gray" onclick="stopScanner()">■ Stop</button></div>
 <div id="scanStatus" class="status">Camera is off.</div>
@@ -81,7 +81,7 @@ input,select{width:100%;padding:12px;border:1px solid #cbd5dc;border-radius:10px
 <div class="card" id="parentLock"><h3 style="margin-top:0">🔐 Parent Mode</h3><p class="hint">Store controls are protected. Default PIN: <b>1234</b></p><input id="pin" type="password" inputmode="numeric" placeholder="Parent PIN"><button class="btn big" style="margin-top:8px" onclick="unlock()">Unlock</button></div>
 <div id="parentArea" style="display:none">
 <div class="card"><h3 style="margin-top:0">➕ Add product</h3><input id="pname" placeholder="Product name"><div class="row" style="margin-top:7px"><input id="pprice" type="number" step=".01" placeholder="Price"><input id="pcode" placeholder="Barcode / PLU"></div><input id="ptags" style="margin-top:7px" placeholder="Search words, e.g. fruit snack"><button class="btn green big" style="margin-top:8px" onclick="addProduct()">Add to Store</button></div>
-<div class="card"><div class="row"><h3 class="grow" style="margin:0">Store inventory</h3><button class="btn red" onclick="resetStore()">Reset</button></div><div id="inventory"></div></div>
+<div class="card"><div class="row"><h3 class="grow" style="margin:0">Store inventory</h3><button class="btn red" onclick="resetStore()">Reset</button></div><p class="hint">Unknown barcodes scanned from the checkout screen can be added automatically. You can edit them here later.</p><div id="inventory"></div></div>
 <div class="card"><h3 style="margin-top:0">⚙️ Parent settings</h3><button class="btn gray" onclick="changePin()">Change PIN</button> <button class="btn gray" onclick="clearSaved()">Clear saved cart</button></div>
 </div></section>
 </main>
@@ -103,7 +103,7 @@ input,select{width:100%;padding:12px;border:1px solid #cbd5dc;border-radius:10px
   <button class="btn gray big" style="margin-top:8px" onclick="scanGiftCard()">📷 Scan Gift Card</button>
 </div>
 <button class="btn gray big" style="margin-top:8px" onclick="closePay()">Cancel</button></div></div>
-<div id="receiptModal" class="modal"><div class="sheet"><h2>🧾 Receipt</h2><div id="receipt"></div><button class="btn green big" onclick="closeReceipt()">Done</button></div></div>
+<div id="receiptModal" class="modal"><div class="sheet"><h2>🧾 Receipt</h2><div style="text-align:center;font-size:42px">🎉🛒⭐</div><div id="receipt"></div><button class="btn green big" onclick="closeReceipt()">Done</button></div></div>
 
 <script>
 const DEFAULT=[
@@ -122,17 +122,33 @@ function toast(s){$("toast").textContent=s;$("toast").classList.add("show");setT
 function speak(s){if("speechSynthesis"in window){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.rate=.95;speechSynthesis.speak(u)}}
 function beep(type="scan"){
 try{
- let c=new (window.AudioContext||window.webkitAudioContext)(), o=c.createOscillator(), g=c.createGain();
- o.type="sine"; o.frequency.value=type==="success"?1047:type==="error"?220:880;
- g.gain.value=.09; o.connect(g); g.connect(c.destination); o.start();
- o.frequency.exponentialRampToValueAtTime(type==="error"?140:1320,c.currentTime+.11);
- o.stop(c.currentTime+.12);
+ const c=new (window.AudioContext||window.webkitAudioContext)();
+ const notes = type==="success"?[[880,.07],[1175,.10]]:type==="error"?[[260,.16],[190,.18]]:[[740,.06],[880,.07]];
+ let t=c.currentTime;
+ notes.forEach(([freq,dur])=>{
+   let o=c.createOscillator(),g=c.createGain();
+   o.type="sine";o.frequency.value=freq;g.gain.setValueAtTime(.0001,t);
+   g.gain.exponentialRampToValueAtTime(.12,t+.01);
+   g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+.02);t+=dur;
+ });
 }catch(e){}
+}
+function moneySound(amount){
+  const cents=Math.round(Number(amount)*100);
+  if(!isFinite(cents))return;
+  beep("success");
+}
+function announceItem(p){
+  speak(`${p.name}. ${money(p.price)}. Added to your cart.`);
+}
+function announceTotal(){
+  speak(`Your total is ${money(total())}.`);
 }
 function update(){ $("total").textContent=money(total());renderCart();renderShelf()}
 function renderShelf(){let q=($("search")?.value||"").toLowerCase();let a=products.filter(p=>(p.name+" "+p.tags+" "+p.code).toLowerCase().includes(q)).slice(0,24);$("shelf").innerHTML=a.map(p=>`<button class="quick" onclick="add('${esc(p.code)}')">${icon(p)} ${esc(p.name)}<small>${money(p.price)}</small></button>`).join("")}
 function renderCart(){if(!cart.length){$("cart").innerHTML='<div class="empty">🛒 Nothing in the cart yet.<br>Scan something to get started!</div>';return}$("cart").innerHTML='<div class="items">'+cart.map((p,i)=>`<div class="item"><div><b>${icon(p)} ${esc(p.name)}</b><small>${p.code}</small></div><div class="qty"><button onclick="qty(${i},-1)">−</button><b>${p.qty}</b><button onclick="qty(${i},1)">+</button></div><b class="price">${money(p.qty*p.price)}</b></div>`).join("")+`</div><hr><div class="row"><b class="grow">TOTAL</b><b style="font-size:22px">${money(total())}</b></div>`}
-function add(code){let p=products.find(x=>x.code===code)||products.find(x=>x.name.toLowerCase()===String(code).toLowerCase());if(!p){showTab("price");$("priceSearch").value=code;doLookup();return}let x=cart.find(x=>x.code===p.code);if(x)x.qty++;else cart.push({...p,qty:1});beep("success");toast("Added "+p.name);speak(p.name);update()}
+function add(code){let p=products.find(x=>x.code===code)||products.find(x=>x.name.toLowerCase()===String(code).toLowerCase());if(!p){showTab("price");$("priceSearch").value=code;doLookup();return}let x=cart.find(x=>x.code===p.code);if(x)x.qty++;else cart.push({...p,qty:1});beep("success");toast(`${p.name} — ${money(p.price)}`);announceItem(p);update();setTimeout(announceTotal,350)}
 function qty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);update()}
 function clearCart(){cart=[];update();toast("Cart cleared")}
 function key(k){$("manualCode").value+=k}
@@ -144,8 +160,43 @@ if(window.giftCardScan){
   return;
 }
 let p=products.find(x=>x.code===code);
-if(p){add(code);showTab("shop")}
-else{$("priceSearch").value=code;showTab("price");doLookup()}
+if(p){
+  add(code);
+  showTab("shop");
+  return;
+}
+unknownBarcode(code);
+}
+function unknownBarcode(code){
+  // Friendly auto-add flow: ask for a product name and price the first time a barcode is seen.
+  stopScanner();
+  showTab("parent");
+  $("parentLock").style.display="none";
+  $("parentArea").style.display="block";
+  $("pcode").value=code;
+  $("pname").value="";
+  $("pprice").value="";
+  $("ptags").value="";
+  toast("New barcode found");
+  speak("I found a new barcode. Let's add it to the store.");
+  setTimeout(()=>{
+    let name=prompt("🛒 NEW ITEM!\n\nBarcode: "+code+"\n\nWhat is the product called?");
+    if(name===null||!name.trim()){
+      $("pcode").value="";
+      return;
+    }
+    let price=prompt("💰 What price should "+name.trim()+" have?");
+    if(price===null||!isFinite(Number(price))){
+      $("pname").value=name.trim();
+      toast("Enter the price in Parent Mode to finish");
+      return;
+    }
+    products.push({name:name.trim(),price:Number(price),code:code,tags:name.toLowerCase(),plu:code.length<=4});
+    save();renderAll();renderInventory();
+    toast("✓ "+name.trim()+" added to the store");
+    speak(name.trim()+" added to the store.");
+    showTab("shop");
+  },250);
 }
 function openGiftPayment(code){
   $("payModal").classList.add("show");
@@ -164,7 +215,7 @@ function stopScanner(){scanning=false;if(stream){stream.getTracks().forEach(t=>t
 async function recognizePhoto(ev){let f=ev.target.files[0];if(!f)return;$("photoResult").innerHTML='<div class="status">🔄 Looking at the picture…</div>';try{await loadVision();let img=document.createElement("img");img.src=URL.createObjectURL(f);await new Promise((r,j)=>{img.onload=r;img.onerror=j});let model=await mobilenet.load(),pred=await model.classify(img,5),hits=[];for(let x of pred){let p=match(x.className);if(p&&!hits.some(y=>y.name===p.name))hits.push(p)}$("photoResult").innerHTML=hits.length?'<div class="status"><b>📸 Possible matches:</b>'+hits.slice(0,3).map(p=>`<div class="row" style="margin-top:8px"><span class="grow">${icon(p)} ${p.name} — <b>${money(p.price)}</b></span><button class="btn" onclick="add('${p.code}')">Add</button></div>`).join("")+'</div>':'<div class="status">I could not confidently match that picture. Try a closer photo or use a barcode/PLU.</div>'}catch(e){$("photoResult").innerHTML='<div class="status">Picture recognition needs internet the first time it loads.</div>'}}
 async function loadVision(){if(window.mobilenet)return;await new Promise((r,j)=>{let s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js";s.onload=r;s.onerror=j;document.head.appendChild(s)});await new Promise((r,j)=>{let s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js";s.onload=r;s.onerror=j;document.head.appendChild(s)})}
 function match(s){s=s.toLowerCase();let rules=[["banana","Banana"],["apple","Apple"],["tomato","Tomato"],["lettuce","Lettuce"],["potato","Potato"],["onion","Onion"],["carrot","Carrot"],["avocado","Avocado"],["lemon","Lemon"],["orange","Orange"],["milk","Milk"],["bread","Bread"],["pizza","Pizza"],["ice cream","Ice Cream"],["cookie","Cookies"],["coffee","Coffee"],["cheese","Cheese"]];for(let r of rules)if(s.includes(r[0]))return products.find(p=>p.name===r[1])}
-function pay(){if(!cart.length){toast("Cart is empty");return}$("payInfo").innerHTML=`<h3>Total: ${money(total())}</h3>${cart.map(x=>`${x.name} × ${x.qty} — ${money(x.price*x.qty)}`).join("<br>")}`;$("payModal").classList.add("show");$("cash").value=""}
+function pay(){if(!cart.length){toast("Cart is empty");speak("Your cart is empty. Let's go shopping!");return}announceTotal();$("payInfo").innerHTML=`<h3>Total: ${money(total())}</h3>${cart.map(x=>`${x.name} × ${x.qty} — ${money(x.price*x.qty)}`).join("<br>")}`;$("payModal").classList.add("show");$("cash").value=""}
 function closePay(){$("payModal").classList.remove("show")}
 function setPayMode(m){
 payMode=m;
