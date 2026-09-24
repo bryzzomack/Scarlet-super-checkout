@@ -26,21 +26,21 @@ This is a pretend checkout for play. Gift cards and payments are local pretend b
 No real payment or gift-card system is connected.
 
 ## GitHub Pages update
-Replace the files in your existing repository with the new index.html, manifest.webmanifest, sw.js, and icons. Commit to main. The service-worker cache is versioned v8 to force a fresh app shell.
+Replace the files in your existing repository with the new index.html, manifest.webmanifest, sw.js, and icons. Commit to main. The service-worker cache is versioned v9 to force a fresh app shell.
 
 ## Moving the pretend store
 Parent Station -> Export Store on the old device.
 On the new device, Parent Station -> Import Store and select the JSON file.
 
 
-## New in v8
+## New in v9
 - Scanner appears near the top when activated.
 - One camera session can scan multiple products without reopening the scanner.
 - Voice uses the best available natural English system voice and a slower, friendlier delivery.
 - Price Check announces itself and generates a random pretend price.
 
 
-## New in v8 — Faster, More Lifelike Scanning
+## New in v9 — Faster, More Lifelike Scanning
 - Continuous scan mode: one camera session can scan item after item.
 - Faster barcode polling with duplicate protection.
 - ZXing browser fallback is included for iPad/browser combinations without BarcodeDetector.
@@ -51,9 +51,13 @@ On the new device, Parent Station -> Import Store and select the JSON file.
 - Scanner uses a higher-resolution rear camera request when available.
 
 
-## v8 repair
-Fixed the broken JavaScript that prevented buttons from working. Cache version bumped to v8.
+## v9 repair
+Fixed the broken JavaScript that prevented buttons from working. Cache version bumped to v9.
 
 
-## v8 — One-Tap Kid Scanning
+## v9 — One-Tap Kid Scanning
 The iPad no longer depends on barcode detection. Scarlet can open Scan mode and simply tap the large green **SCAN ITEM!** button. Every tap instantly creates a fun pretend grocery item and a randomly generated pretend price, announces it, adds it to the cart, and keeps the scanner ready for the next tap. No typing is required.
+
+
+## v9 — Always-Visible Pretend Scan
+Added a large, always-visible **PRETEND SCAN!** button on the main checkout screen. Scarlet can tap it immediately without opening the camera scanner.
