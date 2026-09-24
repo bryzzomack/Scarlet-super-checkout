@@ -49,7 +49,7 @@ hr{border:0;border-top:2px dashed #ddd;margin:15px 0}
   <div class="total" id="total">$0.00</div>
   <div class="center" style="font-weight:900;margin:6px 0 10px">👆 Tap <b>PRETEND SCAN!</b> to instantly scan a pretend item.</div>
   <div class="buttons">
-    <button class="green scanBig" onclick="kidScan()">🛒 PRETEND SCAN!</button>
+    <button class="green scanBig" id="pretendScanBtn" onclick="kidScan()">🔔 PRETEND SCAN!</button>
     <button onclick="startScan()">📷 Scan Barcode</button>
     <button class="blue" onclick="manual()">🔢 Type Code</button>
     <button class="purple" onclick="priceCheck()">🏷️ Price Check</button>
@@ -140,8 +140,121 @@ function speak(t){
    speechSynthesis.speak(u);
  }catch(e){}
 }
-function beep(kind='success'){try{let C=window.AudioContext||window.webkitAudioContext;if(!C)return;let a=new C(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);let f=kind==='success'?[880,1175,1480]:kind==='error'?[180,130]:[660,880];f.forEach((hz,i)=>{o.frequency.setValueAtTime(hz,a.currentTime+i*.09)});g.gain.setValueAtTime(.001,a.currentTime);g.gain.exponentialRampToValueAtTime(.16,a.currentTime+.02);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.3);o.start();o.stop(a.currentTime+.32)}catch(e){}}
+function beep(kind='success'){try{let C=window.AudioContext||window.webkitAudioContext;if(!C)return;let a=new C();if(a.state==='suspended')a.resume();let o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);let f=kind==='success'?[880,1175,1480]:kind==='error'?[180,130]:[660,880];f.forEach((hz,i)=>{o.frequency.setValueAtTime(hz,a.currentTime+i*.09)});g.gain.setValueAtTime(.001,a.currentTime);g.gain.exponentialRampToValueAtTime(.16,a.currentTime+.02);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.3);o.start();o.stop(a.currentTime+.32)}catch(e){}}
+
+function celebrateMini(){
+  const holder = document.getElementById("celebrate");
+  if (!holder) return;
+  const chars = ["⭐","✨","🎉","🛒","🍎","🥳"];
+  for(let i=0;i<10;i++){
+    const s=document.createElement("span");
+    s.className="confetti";
+    s.textContent=chars[Math.floor(Math.random()*chars.length)];
+    s.style.left=(35+Math.random()*30)+"%";
+    s.style.animationDelay=(Math.random()*.15)+"s";
+    holder.appendChild(s);
+  }
+  setTimeout(()=>{ if(holder.children.length > 20) holder.innerHTML=""; }, 1000);
+}
+
 function celebrate(){let holder=document.getElementById('celebrate');holder.innerHTML='';let chars=['🎉','⭐','🛒','🍎','🍭','💖','🥳','✨','🧁','🌈'];for(let i=0;i<45;i++){let s=document.createElement('span');s.className='confetti';s.textContent=chars[Math.floor(Math.random()*chars.length)];s.style.left=Math.random()*100+'%';s.style.animationDelay=Math.random()*.7+'s';holder.appendChild(s)}setTimeout(()=>holder.innerHTML='',3000)}
+
+const pretendItems = [
+  ["Rainbow Cereal","🥣",1.99,5.49],
+  ["Chocolate Milk","🥛",1.49,3.49],
+  ["Bananas","🍌",0.49,1.29],
+  ["Red Apples","🍎",0.69,1.99],
+  ["Pizza","🍕",3.99,8.99],
+  ["Chicken Nuggets","🍗",3.49,7.99],
+  ["Ice Cream","🍦",2.49,6.49],
+  ["Cookies","🍪",1.99,4.99],
+  ["Potato Chips","🥔",1.49,4.49],
+  ["Strawberries","🍓",1.99,5.99],
+  ["Orange Juice","🧃",2.49,4.99],
+  ["Mac & Cheese","🧀",1.29,3.49],
+  ["Donuts","🍩",2.49,5.49],
+  ["Water","💧",0.49,2.49],
+  ["Candy","🍭",0.99,3.99],
+  ["Chocolate Bar","🍫",0.99,2.99],
+  ["Popcorn","🍿",1.49,3.99],
+  ["Tacos","🌮",2.99,6.99],
+  ["Hot Dog","🌭",1.99,4.99],
+  ["Cupcake","🧁",1.29,3.49]
+];
+let kidScanBusy = false;
+
+function kidRandomPrice(min, max){
+  const cents = Math.round((min + Math.random() * (max - min)) * 100);
+  return cents / 100;
+}
+
+function kidSpeakNaturally(text, delay=0){
+  const run = () => {
+    try {
+      if (!("speechSynthesis" in window)) return;
+      speechSynthesis.cancel();
+      const voices = speechSynthesis.getVoices();
+      const preferred =
+        voices.find(v => /Samantha|Karen|Moira|Ava|Jenny|Aria|Zira|Google US English|Microsoft.*Natural|Microsoft.*Jenny|Siri/i.test(v.name) && /^en(-|_)/i.test(v.lang)) ||
+        voices.find(v => /^en-US/i.test(v.lang)) ||
+        voices.find(v => /^en/i.test(v.lang));
+
+      const u = new SpeechSynthesisUtterance(text);
+      if (preferred) u.voice = preferred;
+      u.lang = preferred?.lang || "en-US";
+      u.rate = 0.86;
+      u.pitch = 1.02;
+      u.volume = 1;
+      speechSynthesis.speak(u);
+    } catch(e) {}
+  };
+  if (delay) setTimeout(run, delay); else run();
+}
+
+function kidScan(){
+  if (kidScanBusy) return;
+  kidScanBusy = true;
+
+  const btn = document.getElementById("pretendScanBtn");
+  const status = document.getElementById("scanStatus");
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "🔔 BEEP!";
+  }
+  if (status) status.textContent = "🔔 BEEP! Scanning…";
+
+  // Pick an item and make up a fresh pretend price every time.
+  const item = pretendItems[Math.floor(Math.random() * pretendItems.length)];
+  const price = kidRandomPrice(item[2], item[3]);
+  const code = "KID-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
+  const product = { code, name: item[0], price, emoji: item[1] };
+
+  // Add directly — no forms, no typing, no lookup, no network.
+  cart.push({...product, qty:1});
+  render();
+
+  // The beep happens first, just like a real checkout.
+  beep("success");
+  toast(`⭐ ${product.name} — ${money(product.price)}`);
+  bag(product.emoji);
+  if (status) status.textContent = "✅ SCANNED!";
+
+  // Then announce the item and price with the best available device voice.
+  kidSpeakNaturally(`Beep! ${product.name}. The price is ${money(product.price)}. Your total is ${money(total())}.`, 180);
+
+  // Small celebration, then get ready immediately for the next scan.
+  setTimeout(() => {
+    if (typeof celebrateMini === "function") celebrateMini();
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "🔔 PRETEND SCAN!";
+    }
+    if (status) status.textContent = "READY! Tap PRETEND SCAN again!";
+    kidScanBusy = false;
+  }, 850);
+}
+
 function add(code){code=String(code).trim();let p=products[code];if(!p){unknown(code);return false}let existing=cart.find(x=>x.code===code);if(existing)existing.qty++;else cart.push({...p,qty:1});render();beep();speak(`${p.name}. ${money(p.price)}. Added to your cart. Your total is ${money(total())}.`);toast(`⭐ ${p.name} added!`);bag(p.emoji||'🛍️');return true}
 function removeItem(i){cart.splice(i,1);render();beep('error');speak('Item removed.');}
 function clearCart(){cart=[];render();speak('Cart cleared! Ready for a new shopping adventure!');}
@@ -225,9 +338,23 @@ function handleScan(code){
   }
 }
 function unknown(code){
- beep('error');
- openModal(`<h2>✨ NEW ITEM!</h2><p>I found a barcode I don't know yet.</p><div class="badge">📦 ${htmlEscape(code)}</div><label>What is it?</label><input id="newName" placeholder="Example: Rainbow Cereal"><label>Price</label><input id="newPrice" inputmode="decimal" placeholder="2.99"><label>Emoji</label><input id="newEmoji" maxlength="2" placeholder="🛒"><div class="buttons"><button class="green" onclick="saveNew('${htmlEscape(code)}')">Add to Store!</button><button class="yellow" onclick="closeModal()">Cancel</button></div>`);
- speak('New item! Let’s teach the checkout about this product.');
+  // Kid mode: unknown real-world barcodes become instant pretend grocery items.
+  if (kidScanBusy) return;
+  kidScanBusy = true;
+  const item = pretendItems[Math.floor(Math.random() * pretendItems.length)];
+  const price = kidRandomPrice(item[2], item[3]);
+  const p = {code:String(code), name:item[0], price, emoji:item[1]};
+  products[String(code)] = p;
+  saveProducts();
+  const existing = cart.find(x=>x.code===p.code);
+  if(existing) existing.qty++; else cart.push({...p,qty:1});
+  render();
+  beep("success");
+  toast(`⭐ ${p.name} — ${money(p.price)}`);
+  bag(p.emoji);
+  document.getElementById('scanStatus').textContent='✅ SCANNED! Point at the next barcode…';
+  kidSpeakNaturally(`Beep! ${p.name}. The price is ${money(p.price)}. Your total is ${money(total())}.`, 180);
+  setTimeout(()=>{kidScanBusy=false;},850);
 }
 function saveNew(code){let name=document.getElementById('newName').value.trim(),price=parseFloat(document.getElementById('newPrice').value),emoji=document.getElementById('newEmoji').value.trim()||'🛒';if(!name||!isFinite(price)||price<0){toast('Please enter a name and price.');return}products[code]={code,name,price,emoji};saveProducts();closeModal();speak(`${name}. ${money(price)}. I learned a new item!`);celebrate();add(code)}
 function htmlEscape(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;")}
